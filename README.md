@@ -76,7 +76,7 @@ func main() {
 
 ### Output:
 
-```json
+```go
 Cache hit: {"message": "Hello, World!"}
 Cache miss after expiry
 ```
