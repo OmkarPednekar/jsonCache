@@ -77,6 +77,6 @@ func main() {
 ### Output:
 
 ```json
-Cache hit: map[message:Hello, World!]
+Cache hit: {"message": "Hello, World!"}
 Cache miss after expiry
 ```
