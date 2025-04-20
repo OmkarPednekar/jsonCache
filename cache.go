@@ -23,11 +23,11 @@ func New() *Cache {
 
 func (c *Cache) Set(key string, value []byte, ttl int) {
 	expiration := time.Now().Add(time.Duration(ttl) * time.Millisecond)
-	var toStore = &CacheElement{
+	var toStore = CacheElement{
 		value:  value,
 		expiry: expiration,
 	}
-	c.store[key] = *toStore
+	c.store[key] = toStore
 }
 
 func (c *Cache) Get(key string) []byte {
