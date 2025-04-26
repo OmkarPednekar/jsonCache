@@ -128,6 +128,7 @@ func (c *Cache) _evict() {
 	if c.list.length > 0 {
 		c.list.length--
 	}
+	delete(c.store, tmpPrev.key)
 }
 
 func (c *Cache) _addNode(node *Node) {
