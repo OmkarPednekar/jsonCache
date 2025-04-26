@@ -49,16 +49,26 @@ func New(size int) *Cache {
 
 func (c *Cache) Set(key string, value []byte, ttl int) {
 	expiration := time.Now().Add(time.Duration(ttl) * time.Millisecond)
-	_node := _newNode(key, value)
-	var toStore = CacheElement{
-		node:   _node,
-		expiry: expiration,
+	var toStore CacheElement
+	c.cleanExpiredEntries()
+	val, found := c.store[key]
+	if found {
+		val.node.value = value
+		val.expiry = expiration
+		c._moveToHead(val.node)
+		toStore = val
+	} else {
+		_node := _newNode(key, value)
+		toStore = CacheElement{
+			node:   _node,
+			expiry: expiration,
+		}
+		//cache full
+		if c.list.length >= c.cap {
+			c._evict()
+		}
+		c._addNode(_node)
 	}
-	//cache full
-	if c.list.length >= c.cap {
-		c._evict()
-	}
-	c._addNode(_node)
 	c.store[key] = toStore
 }
 
@@ -142,6 +152,20 @@ func (c *Cache) _addNode(node *Node) {
 		tmpNext.prev = node
 	}
 	c.list.length++
+}
+
+func (c *Cache) cleanExpiredEntries() {
+	// Get the current time
+	now := time.Now()
+
+	// Iterate over the cache and remove expired items
+	for key, entry := range c.store {
+		if now.After(entry.expiry) {
+			// If expired, remove the item from the store and the list
+			delete(c.store, key)
+			c._removeNode(entry.node)
+		}
+	}
 }
 
 // helper functions
