@@ -32,7 +32,7 @@ func New(size int) *Cache {
 	//initialize a lru list
 	dummyHead, dummyTail := _initDummyNodes()
 	list := &List{head: dummyHead, tail: dummyTail, length: 0}
-	//inititalize a new cache engine
+	//initialize a new cache engine
 	cache := &Cache{
 		store: make(map[string]CacheElement),
 		list:  list,
@@ -77,38 +77,69 @@ func (c *Cache) Get(key string) []byte {
 }
 
 func (c *Cache) _moveToHead(node *Node) {
+	// If node is already at the head, no need to move it.
+	if node == c.list.head.next {
+		return
+	}
+
+	// Unlink the node from its current position
 	node.prev.next = node.next
 	node.next.prev = node.prev
+
+	// Move node to the head
 	head := c.list.head
 	tmpNext := head.next
 	head.next = node
 	node.next = tmpNext
 	node.prev = head
-	node.next.prev = node
+	if tmpNext != nil {
+		tmpNext.prev = node
+	}
 }
 
 func (c *Cache) _removeNode(toRemove *Node) {
+	// Unlink the node
 	toRemove.prev.next = toRemove.next
-	toRemove.next.prev = toRemove.prev
-	toRemove = nil
-	c.list.length--
+	if toRemove.next != nil {
+		toRemove.next.prev = toRemove.prev
+	}
+
+	// Decrease the list length
+	if c.list.length > 0 {
+		c.list.length--
+	}
 }
+
 func (c *Cache) _evict() {
+	// Ensure there's something to evict
+	if c.list.length == 0 {
+		return
+	}
+
+	// Evict the tail node (least recently used)
 	tail := c.list.tail
 	tmpPrev := tail.prev
+
+	// Unlink the tail node
 	tmpPrev.prev.next = tmpPrev.next
 	tail.prev = tmpPrev.prev
-	tmpPrev = nil
-	c.list.length--
+
+	// Decrease the list length
+	if c.list.length > 0 {
+		c.list.length--
+	}
 }
 
 func (c *Cache) _addNode(node *Node) {
+	// Add node at the head
 	head := c.list.head
 	tmpNext := head.next
 	head.next = node
 	node.next = tmpNext
 	node.prev = head
-	node.next.prev = node
+	if tmpNext != nil {
+		tmpNext.prev = node
+	}
 	c.list.length++
 }
 
