@@ -1,6 +1,8 @@
 package jsonCache
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -93,5 +95,35 @@ func TestCacheEvictionAndExpirationCombined(t *testing.T) {
 		// key3 should still be in cache
 		value = cache.Get("key3")
 		assert.NotNil(t, value, "Cache should return value for key3")
+	})
+}
+
+func TestCacheConcurrentAccess(t *testing.T) {
+	cache := New(100)
+	var wg sync.WaitGroup
+	numOps := 1000
+
+	t.Run("Concurrent set and get", func(t *testing.T) {
+		// Writers
+		for i := 0; i < numOps; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				key := fmt.Sprintf("key%d", i)
+				cache.Set(key, []byte(fmt.Sprintf("val%d", i)), 5000)
+			}(i)
+		}
+
+		// Readers
+		for i := 0; i < numOps; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				key := fmt.Sprintf("key%d", i)
+				_ = cache.Get(key) // We're just checking for races
+			}(i)
+		}
+
+		wg.Wait()
 	})
 }

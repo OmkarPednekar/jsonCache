@@ -1,6 +1,7 @@
 package jsonCache
 
 import (
+	"sync"
 	"time"
 )
 
@@ -18,9 +19,11 @@ type List struct {
 }
 
 type Cache struct {
-	store map[string]CacheElement
-	list  *List
-	cap   int
+	mu     sync.RWMutex
+	listMu sync.Mutex
+	store  map[string]CacheElement
+	list   *List
+	cap    int
 }
 
 type CacheElement struct {
@@ -48,6 +51,8 @@ func New(size int) *Cache {
 }
 
 func (c *Cache) Set(key string, value []byte, ttl int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	expiration := time.Now().Add(time.Duration(ttl) * time.Millisecond)
 	var toStore CacheElement
 	c.cleanExpiredEntries()
@@ -73,6 +78,8 @@ func (c *Cache) Set(key string, value []byte, ttl int) {
 }
 
 func (c *Cache) Get(key string) []byte {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	entry, found := c.store[key]
 	if !found {
 		return nil
@@ -87,6 +94,8 @@ func (c *Cache) Get(key string) []byte {
 }
 
 func (c *Cache) _moveToHead(node *Node) {
+	c.listMu.Lock() // Lock the list
+	defer c.listMu.Unlock()
 	// If node is already at the head, no need to move it.
 	if node == c.list.head.next {
 		return
@@ -108,6 +117,8 @@ func (c *Cache) _moveToHead(node *Node) {
 }
 
 func (c *Cache) _removeNode(toRemove *Node) {
+	c.listMu.Lock() // Lock the list
+	defer c.listMu.Unlock()
 	// Unlink the node
 	toRemove.prev.next = toRemove.next
 	if toRemove.next != nil {
