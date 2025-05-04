@@ -8,7 +8,7 @@ A simple, in-memory key-value cache library for JSON data with support for TTL (
 - **TTL support**: Set an expiration time (TTL) for cache entries.
 - **Automatic expired entry deletion**: Removes expired cache entries.
 - **Thread-safety**: Designed to be used in concurrent environments.
-- **Eviction policies** (Coming soon): Plan to implement LRU, LFU, and FIFO eviction strategies.
+- **LRU Eviction**: Least Recently Used eviction policy to ensure cache size remains within limits.
 
 ## Installation
 
@@ -34,13 +34,14 @@ import (
 
 func main() {
 	// Initialize cache
-	cache := jsonCache.New()
+	cache := jsonCache.New(2) // Set cache size to 2
 
 	// Set cache with a TTL of 3 seconds
-	cache.Set("key", []byte(`{"message": "Hello, World!"}`), 3000)
+	cache.Set("key1", []byte(`{"message": "Hello, World!"}`), 3000)
+	cache.Set("key2", []byte(`{"message": "Another value"}`), 3000)
 
 	// Get from cache
-	data := cache.Get("key")
+	data := cache.Get("key1")
 	if data != nil {
 		var result map[string]string
 		err := json.Unmarshal(data, &result)
@@ -48,17 +49,17 @@ func main() {
 			fmt.Println("Error unmarshaling JSON:", err)
 		} else {
 			// Print parsed JSON data
-			fmt.Println("Cache hit:", result)
+			fmt.Println("Cache hit for key1:", result)
 		}
 	} else {
-		fmt.Println("Cache miss")
+		fmt.Println("Cache miss for key1")
 	}
 
-	// Wait for cache to expire
-	time.Sleep(4 * time.Second)
+	// Set another value to trigger eviction (LRU)
+	cache.Set("key3", []byte(`{"message": "Evicted value"}`), 3000)
 
-	// Try again after TTL expiry
-	data = cache.Get("key")
+	// Try to get evicted key
+	data = cache.Get("key2") // This should be evicted due to LRU policy
 	if data != nil {
 		var result map[string]string
 		err := json.Unmarshal(data, &result)
@@ -66,10 +67,10 @@ func main() {
 			fmt.Println("Error unmarshaling JSON:", err)
 		} else {
 			// Print parsed JSON data
-			fmt.Println("Cache hit after expiry:", result)
+			fmt.Println("Cache hit for key2:", result)
 		}
 	} else {
-		fmt.Println("Cache miss after expiry")
+		fmt.Println("Cache miss for key2 (evicted)")
 	}
 }
 ```
@@ -77,6 +78,7 @@ func main() {
 ### Output:
 
 ```go
-Cache hit: {"message": "Hello, World!"}
-Cache miss after expiry
+Cache hit for key1: {"message": "Hello, World!"}
+Cache miss for key2
+Cache miss for key2 (evicted)
 ```
